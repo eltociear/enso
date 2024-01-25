@@ -1,7 +1,6 @@
 from Standard.Base import all
 import Standard.Base.Errors.Common.No_Such_Method
 import Standard.Base.Errors.Common.Type_Error
-from Standard.Base.Data.Filter_Condition.Filter_Condition import all
 
 import project.Data.Type.Value_Type.Value_Type
 
@@ -12,60 +11,62 @@ import project.Data.Type.Value_Type.Value_Type
 
    It also performs validation and will throw errors if unexpected column types
    are encountered.
-make_filter_column source_column filter_condition on_problems = case filter_condition of
-    # Equality
-    Equal value ->
-        Warning.with_suspended source_column source_column->
-            Warning.with_suspended value value->
-                on_problems.escalate_warnings <|
-                    source_column == value
-    Not_Equal value ->
-        Warning.with_suspended source_column source_column->
-            Warning.with_suspended value value->
-                on_problems.escalate_warnings <|
-                    source_column != value
-    # Nothing
-    Is_Nothing -> source_column.is_nothing
-    Not_Nothing -> source_column.is_nothing.not
-    # Boolean
-    Is_True ->
-        Value_Type.expect_boolean source_column <| source_column
-    Is_False -> source_column.not
-    # Comparisons
-    Less value -> (source_column < value)
-    Equal_Or_Less value -> (source_column <= value)
-    Equal_Or_Greater value -> (source_column >= value)
-    Greater value -> (source_column > value)
-    Between lower upper -> source_column.between lower upper
-    # Text
-    Equal_Ignore_Case value locale ->
-        source_column.equals_ignore_case value locale
-    Starts_With prefix case_sensitivity ->
-        source_column.starts_with prefix case_sensitivity
-    Ends_With suffix case_sensitivity ->
-        source_column.ends_with suffix case_sensitivity
-    Contains substring case_sensitivity ->
-        source_column.contains substring case_sensitivity
-    Not_Contains substring case_sensitivity ->
-        source_column.contains substring case_sensitivity . not
-    Is_Empty ->
-        source_column.is_empty
-    Not_Empty ->
-        source_column.is_empty.not
-    Like pattern ->
-        source_column.like pattern
-    Not_Like pattern ->
-        source_column.like pattern . not
-    # Numeric
-    Is_Nan -> source_column.is_nan
-    Is_Infinite -> source_column.is_infinite
-    Is_Finite ->
-        is_infinite_column = source_column.is_infinite
-        is_nan_column = source_column.is_nan
-        ## We check is_nan_column for error, since some Database backends may
-           actually not support it and throw Unsupported_Database_Operation here.
-        if is_nan_column.is_error then is_infinite_column.not else
-            (is_infinite_column || is_nan_column).not
-    # Vector
-    Is_In values -> source_column.is_in values
-    Not_In values -> source_column.is_in values . not
+make_filter_column source_column filter_condition on_problems =
+    base_column = case filter_condition of
+        # Equality
+        Filter_Condition.Equal value _ ->
+            Warning.with_suspended source_column source_column->
+                Warning.with_suspended value value->
+                    on_problems.escalate_warnings <|
+                        source_column == value
+        Filter_Condition.Not_Equal value _ ->
+            Warning.with_suspended source_column source_column->
+                Warning.with_suspended value value->
+                    on_problems.escalate_warnings <|
+                        source_column != value
+        # Nothing
+        Filter_Condition.Is_Nothing _ -> source_column.is_nothing
+        Filter_Condition.Not_Nothing _ -> source_column.is_nothing.not
+        # Boolean
+        Filter_Condition.Is_True _ ->
+            Value_Type.expect_boolean source_column <| source_column
+        Filter_Condition.Is_False _ -> source_column.not
+        # Comparisons
+        Filter_Condition.Less value _ -> (source_column < value)
+        Filter_Condition.Equal_Or_Less value _ -> (source_column <= value)
+        Filter_Condition.Equal_Or_Greater value _ -> (source_column >= value)
+        Filter_Condition.Greater value _ -> (source_column > value)
+        Filter_Condition.Between lower upper _ -> source_column.between lower upper
+        # Text
+        Filter_Condition.Equal_Ignore_Case value locale _ ->
+            source_column.equals_ignore_case value locale
+        Filter_Condition.Starts_With prefix case_sensitivity _ ->
+            source_column.starts_with prefix case_sensitivity
+        Filter_Condition.Ends_With suffix case_sensitivity _ ->
+            source_column.ends_with suffix case_sensitivity
+        Filter_Condition.Contains substring case_sensitivity _ ->
+            source_column.contains substring case_sensitivity
+        Filter_Condition.Not_Contains substring case_sensitivity _ ->
+            source_column.contains substring case_sensitivity . not
+        Filter_Condition.Is_Empty _ ->
+            source_column.is_empty
+        Filter_Condition.Not_Empty _ ->
+            source_column.is_empty.not
+        Filter_Condition.Like pattern _ ->
+            source_column.like pattern
+        Filter_Condition.Not_Like pattern _ ->
+            source_column.like pattern . not
+        # Numeric
+        Filter_Condition.Is_Nan _ -> source_column.is_nan
+        Filter_Condition.Is_Infinite _ -> source_column.is_infinite
+        Filter_Condition.Is_Finite _ ->
+            is_infinite_column = source_column.is_infinite
+            is_nan_column = source_column.is_nan
+            ## We check is_nan_column for error, since some Database backends may
+               actually not support it and throw Unsupported_Database_Operation here.
+            if is_nan_column.is_error then is_infinite_column.not else
+                (is_infinite_column || is_nan_column).not
+        # Vector
+        Filter_Condition.Is_In values _ -> source_column.is_in values
+        Filter_Condition.Not_In values _ -> source_column.is_in values . not
+    if filter_condition.action == Filter_Action.Keep then base_column else base_column.not
