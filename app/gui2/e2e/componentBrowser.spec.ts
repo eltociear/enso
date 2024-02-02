@@ -91,7 +91,7 @@ test('Accepting suggestion', async ({ page }) => {
 
   // Accepting with Enter
   nodeCount = await locate.graphNode(page).count()
-  await page.mouse.click(100, 100) // deselect node
+  await page.mouse.click(110, 110) // deselect node
   await locate.addNewNodeButton(page).click()
   await page.keyboard.press('Enter')
   await expect(locate.componentBrowser(page)).not.toBeVisible()
